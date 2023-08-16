@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    policies.dodois.io/generate-ingress: "true"
+    project.werf.io/env: dev-dev-test-argo-cats
+    project.werf.io/name: demo-cats
+    werf.io/version: v1.2.117
+  name: demo-cats
+  labels:
+    helm.sh/chart: demo-cats
+    app.kubernetes.io/name: demo-cats
+    app.kubernetes.io/instance: test-argo-cats-demo-cats
+    app.kubernetes.io/component: demo-cats
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5000
+      targetPort: 5000
+      protocol: TCP
+      name: web
+  selector:
+    app.kubernetes.io/name: demo-cats
+    app.kubernetes.io/instance: test-argo-cats-demo-cats
+---
+# Source: common-app/templates/deployments.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-cats
+  labels:
+    helm.sh/chart: demo-cats
+    app.kubernetes.io/name: demo-cats
+    app.kubernetes.io/instance: test-argo-cats-demo-cats
+    app.kubernetes.io/component: demo-cats
+  annotations:
+    project.werf.io/env: dev-dev-test-argo-cats
+    project.werf.io/name: demo-cats
+    werf.io/version: v1.2.117
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demo-cats
+      app.kubernetes.io/instance: test-argo-cats-demo-cats
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: demo-cats
+        app.kubernetes.io/name: demo-cats
+        app.kubernetes.io/instance: test-argo-cats-demo-cats
+        app.kubernetes.io/component: demo-cats
+      annotations:
+        kubectl.kubernetes.io/default-container: demo-cats
+    spec:
+      containers:
+        - name: demo-cats
+          image: dodoreg.azurecr.io/demo-cats:zynchro/random-cats:latest
+          env:
+          ports:
+            - name: web
+              containerPort: 5000
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 1
+              memory: 1G
+            requests:
+              cpu: 0.1
+              memory: 0.5G
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+      volumes:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                topologyKey: topology.kubernetes.io/zone
+                labelSelector:
+                  matchExpressions:
+                    - key: app.kubernetes.io/name
+                      operator: In
+                      values:
+                        - demo-cats
+              weight: 100
+            - podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchExpressions:
+                    - key: app.kubernetes.io/name
+                      operator: In
+                      values:
+                        - demo-cats
+              weight: 100
+      priorityClassName: applications
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 60
+      automountServiceAccountToken: false
+      serviceAccountName: default
+      dnsPolicy: ClusterFirst
+
