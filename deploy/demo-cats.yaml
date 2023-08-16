@@ -55,7 +55,7 @@ spec:
     spec:
       containers:
         - name: demo-cats
-          image: zynchro/random-cats:latest
+          image: mikesir87/cats:latest
           env:
           ports:
             - name: web
