@@ -1,0 +1,53 @@
+{{- $chart := include "chart.name" $ -}}
+{{- $release := include "release.name" $ -}}
+
+{{- range .Values.deployments -}}
+  {{- $spec := . -}}
+  {{- $component := $spec.component  -}}
+  {{- $name := include "components.deploymentName" (tuple $ $component) -}}
+  {{- if $spec.hpa -}}
+  {{- with $spec.hpa -}}
+    {{- $hpa := . -}}
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $name }}
+  labels: {{ include "labels.app" (tuple $chart $release $name $component) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ $name }}
+  minReplicas: {{ $hpa.minReplicas }}
+  maxReplicas: {{ $hpa.maxReplicas }}
+  metrics:
+    {{ range $hpa.metrics -}}
+      {{- $metric := . }}
+      {{- $type := $metric.type }}
+  - type: {{ $type }}
+      {{ if $type | eq "Resource" }}
+{{ include "hpa.metrics.resource" $metric | nindent 4 }}
+      {{ else if $type | eq "External" }}
+{{ include "hpa.metrics.external" $metric | nindent 4 }}
+      {{ else if $type | eq "Pods" }}
+{{ include "hpa.metrics.pods" $metric | nindent 4 }}
+      {{ else if $type | eq "Object" }}
+{{ include "hpa.metrics.object" $metric | nindent 4 }}
+      {{ else }}
+{{ fail "deployments.item.hpa.metrics.item.type is unsupported" }}
+      {{ end }}
+    {{ end }}
+  {{- if or $hpa.behavior.scaleUp $hpa.behavior.scaleDown }}
+  behavior:
+    {{- if $hpa.behavior.scaleUp }}
+    scaleUp: {{ include "hpa.behavior.scale" $hpa.behavior.scaleUp | nindent 6 }}
+    {{- end }}
+    {{- if $hpa.behavior.scaleDown }}
+    scaleDown: {{ include "hpa.behavior.scale" $hpa.behavior.scaleDown | nindent 6 }}
+    {{- end }}
+    {{- end }}
+
+---
+  {{- end -}}
+  {{- end -}}
+{{- end -}}

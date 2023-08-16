@@ -1,0 +1,22 @@
+{{- $chart := include "chart.name" $ -}}
+{{- $release := include "release.name" $ -}}
+
+{{- range .Values.deployments -}}
+  {{- $spec := . -}}
+  {{- $replicas := int $spec.replicas -}}
+  {{- $hpaReplicas := int (index (default (dict "minReplicas" 0) $spec.hpa) "minReplicas") -}}
+  {{- if (gt $replicas 1) | or (gt $hpaReplicas 1) -}}
+    {{- $component := $spec.component -}}
+    {{- $name := include "components.deploymentName" (tuple $ $component) -}}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}
+  labels: {{ include "labels.app" (tuple $chart $release $name $component) | nindent 4 }}
+spec:
+  maxUnavailable: {{ $spec.maxUnavailable }}
+  selector:
+    matchLabels: {{ include "labels.selector" (tuple $name $release) | nindent 6 }}
+---
+  {{- end -}}
+{{- end -}}

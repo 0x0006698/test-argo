@@ -1,0 +1,36 @@
+{{- $chart := include "chart.name" $ -}}
+{{- $release := include "release.name" $ -}}
+
+{{- if .Values.jobs -}}
+  {{- range .Values.jobs -}}
+    {{- $spec := . -}}
+    {{- $component := $spec.component -}}
+    {{- $name := include "components.jobName" (tuple $chart $component) -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}
+  labels: {{ include "labels.app" (tuple $chart $release $name $component) | nindent 4 }}
+  annotations:
+  {{- if $spec.hook }}
+    {{ include (printf "annotations.%s" $spec.hook.type) $spec.hook | fromJson | toYaml | nindent 4 }}
+  {{- end }}
+spec:
+  {{ include "components.jobs.options" $spec | nindent 2 }}
+  template:
+    metadata:
+      name: {{ $name }}
+      labels: {{ include "labels.app" (tuple $chart $release $name $component) | nindent 8 }}
+    spec:
+      containers:
+      - {{ include "components.app" (tuple $ $spec) | nindent 8 }}
+      {{ include "components.volumes" (tuple $ $spec) | nindent 6 }}
+      {{ include "components.nodeSelector" $spec | nindent 6 }}
+      {{ include "components.imagePullSecrets" $ | nindent 6 }}
+      {{ include "components.priorityClassName" $spec| nindent 6 }}
+      {{ include "components.restartPolicy" $spec.restartPolicy | nindent 6 }}
+      {{ include "components.serviceAccount" (tuple $name $spec) | nindent 6 }}
+      {{ include "components.tolerations" $spec | nindent 6 }}
+---
+  {{- end -}}
+{{- end -}}

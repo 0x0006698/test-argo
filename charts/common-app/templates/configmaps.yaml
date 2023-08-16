@@ -1,0 +1,20 @@
+{{- $chart := include "chart.name" $ -}}
+{{- $release := include "release.name" $ -}}
+
+{{- if .Values.configMaps }}
+  {{- range .Values.configMaps }}
+    {{- $component := .component -}}
+    {{- $name := include "components.configMapName" (tuple $ $component) -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}
+  labels: {{ include "labels.app" (tuple $chart $release $name $component) | nindent 4 }}
+data:
+    {{- range .data }}
+    {{ .name }}: |
+{{ .value | nindent 6 }}
+    {{- end }}
+---
+  {{- end }}
+{{- end }}

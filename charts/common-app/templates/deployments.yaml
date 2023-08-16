@@ -1,0 +1,44 @@
+{{- $chart := include "chart.name" $ -}}
+{{- $release := include "release.name" $ -}}
+
+{{- range .Values.deployments -}}
+  {{- $spec := . -}}
+  {{- $component := $spec.component -}}
+  {{- $name := include "components.deploymentName" (tuple $ $component) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels: {{ include "labels.app" (tuple $chart $release $name $component) | nindent 4 }}
+spec:
+{{ include "components.deployments.replicas" $spec | nindent 2 }}
+{{ include "components.deployments.strategy" $spec | nindent 2 }}
+  selector:
+    matchLabels:
+    {{ include "labels.selector" (tuple $name $release) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+      {{ include "labels.app" (tuple $chart $release $name $component) | nindent 8 }}
+      {{ include "components.msi.labels" (tuple $name $spec) | nindent 8 }}
+      annotations:
+      {{ include "annotations.defaultContainer" $component | nindent 8 }}
+      {{ include "components.diagnostics.metrics" $spec | nindent 8 }}
+      {{ include "components.diagnostics.tracing.annotations" (tuple $spec $name) | nindent 8 }}
+      {{ include "components.msi.annotations" $spec | nindent 8 }}
+    spec:
+      containers:
+      - {{ include "components.app" (tuple $ $spec ) | nindent 8 }}
+      {{ include "components.diagnostics.profiling.container" (tuple $chart $spec) | nindent 6 }}
+      {{ include "components.volumes" (tuple $ $spec) | nindent 6 }}
+      {{ include "components.affinity" $name | nindent 6 }}
+      {{ include "components.nodeSelector" $spec | nindent 6 }}
+      {{ include "components.imagePullSecrets" $ | nindent 6 }}
+      {{ include "components.priorityClassName" $spec | nindent 6 }}
+      {{ include "components.restartPolicy" "Always" | nindent 6 }}
+      {{ include "components.terminationGracePeriod" $spec | nindent 6 }}
+      {{ include "components.serviceAccount" (tuple $name $spec) | nindent 6 }}
+      {{ include "components.dnsConfig" $spec | nindent 6 }}
+      {{ include "components.tolerations" $spec | nindent 6 }}
+---
+{{- end -}}
