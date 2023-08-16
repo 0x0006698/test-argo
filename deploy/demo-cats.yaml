@@ -55,7 +55,7 @@ spec:
     spec:
       containers:
         - name: demo-cats
-          image: dodoreg.azurecr.io/demo-cats:zynchro/random-cats:latest
+          image: zynchro/random-cats:latest
           env:
           ports:
             - name: web
